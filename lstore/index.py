@@ -21,7 +21,7 @@ class Index:
     def locate(self, column, value):
         RIDs = [] # will contain the list of all RIDs associated with the value
         btree = self.indices[column]
-        root = self.indices[column].root
+        root = btree.root
         btree.BtreeSearch(root, value, RIDs)
         return RIDs
 
@@ -30,9 +30,9 @@ class Index:
     """
 
     def locate_range(self, begin, end, column):
-        RIDs = [] # will contain the list of all RIDs associated with the values in the range of begin and end
+        RIDs = [] # will contain the list of all RIDs associated with the values in the range of begin and end, inclusive to both
         btree = self.indices[column]
-        root = self.indices[column].root
+        root = btree.root
         btree.BtreeSearchRange(root, begin, end, RIDs)
         return RIDs
 
@@ -59,17 +59,16 @@ class Index:
 
 # Source: https://www.geeksforgeeks.org/dsa/b-tree-in-python/. Code is a modified version of GeeksforGeeks's.
 class BTreeNode:
-    def __init__(self, leaf=True):
+    def __init__(self, leaf=False):
         self.leaf = leaf
         # store a tuple in the format (value, RID) in keys
         self.keys = []
-        self.children = []
-        self.numKeys = 0
+        self.child = []
 
     def display(self, level=0):
         print(f"Level {level}: {self.keys}")
         if not self.leaf:
-            for child in self.children:
+            for child in self.child:
                 child.display(level + 1)
 
 class BTree:
@@ -86,13 +85,11 @@ class BTree:
         if len(root.keys) == (2 * self.t) - 1:
             temp = BTreeNode()
             self.root = temp
-            temp.children.append(root)
+            temp.child.append(root)
             self.split_child(temp, 0)
             self.insert_non_full(temp, k)
-            temp.numKeys += 1
         else:
             self.insert_non_full(root, k)
-            root.numKeys += 1
 
     # x is the node we want to insert the key k into
     def insert_non_full(self, x, k):
@@ -107,11 +104,11 @@ class BTree:
             while i >= 0 and k[0] < x.keys[i][0]:
                 i -= 1
             i += 1
-            if len(x.children[i].keys) == (2 * self.t) - 1:
+            if len(x.child[i].keys) == (2 * self.t) - 1:
                 self.split_child(x, i)
                 if k[0] > x.keys[i][0]:
                     i += 1
-            self.insert_non_full(x.children[i], k)
+            self.insert_non_full(x.child[i], k)
 
     # Split the child
     def split_child(self, x, i):
@@ -124,21 +121,23 @@ class BTree:
         y.keys = y.keys[0: t - 1]
         if not y.leaf:
             z.child = y.child[t: 2 * t]
-            y.child = y.child[0: t - 1]
+            y.child = y.child[0: t]
     
     # Delete a node
+    # x: the node we are currently searching for the key
+    # k: the key we want to delete
     def delete(self, x, k):
         t = self.t
         i = 0
         while i < len(x.keys) and k[0] > x.keys[i][0]:
             i += 1
         if x.leaf:
-            if i < len(x.keys) and x.keys[i][0] == k[0]:
+            if i < len(x.keys) and x.keys[i] == k:
                 x.keys.pop(i)
                 return
             return
 
-        if i < len(x.keys) and x.keys[i][0] == k[0]:
+        if i < len(x.keys) and x.keys[i] == k:
             return self.delete_internal_node(x, k, i)
         elif len(x.child[i].keys) >= t:
             self.delete(x.child[i], k)
@@ -166,7 +165,7 @@ class BTree:
     def delete_internal_node(self, x, k, i):
         t = self.t
         if x.leaf:
-            if x.keys[i][0] == k[0]:
+            if x.keys[i] == k:
                 x.keys.pop(i)
                 return
             return
@@ -184,7 +183,7 @@ class BTree:
     # Delete the predecessor
     def delete_predecessor(self, x):
         if x.leaf:
-            return x.pop()
+            return x.keys.pop()
         n = len(x.keys) - 1
         if len(x.child[n].keys) >= self.t:
             self.delete_sibling(x, n + 1, n)
@@ -258,11 +257,14 @@ class BTree:
     # RIDs: the running list of all RIDs
     # finds all RIDs associated to the value k (not a tuple)
     def BtreeSearch(self, x, k, RIDs):
-        i = 0
-        while i < x.numKeys:
-            if k == x.keys[i][0]:
-                RIDs.append(x.keys[i][1]) # store the RID
+        i = 0 # the index of the child to recurse into
+        # look for the child we need to recurse into
+        while i < len(x.keys) and k > x.keys[i][0]:
             i += 1
+        # actually search the keys for values
+        for j in range(len(x.keys)):
+            if k == x.keys[j][0]:
+                RIDs.append(x.keys[j][1]) # store the RID
         if x.leaf:
             return None
         return self.BtreeSearch(x.child[i], k, RIDs)
@@ -270,17 +272,17 @@ class BTree:
     # x: node we are searching
     # k: the key we are looking for
     # RIDs: the running list of all RIDs
-    # finds all RIDs associated to the values between begin and end
+    # finds all RIDs with values in the interval [begin, end] (inclusive to both begin and end)
+    # note: can probably be optimized further for performance
     def BtreeSearchRange(self, x, begin, end, RIDs):
-        i = 0
-        while i < x.numKeys:
-            for val in range(begin, end):
-                if val == x.keys[i][0]:
-                    RIDs.append(x.keys[i][1]) # store the RID
-            i += 1
-        if x.leaf:
-            return None
-        return self.BtreeSearchRange(x.child[i], begin, end, RIDs)
-
-
-
+        j = 0
+        # find the first key that is >= begin
+        while j < len(x.keys) and x.keys[j][0] < begin:
+            j += 1
+        for i in range(j, len(x.keys)):
+            if not x.leaf:
+                self.BtreeSearchRange(x.child[i], begin, end, RIDs) # need to search every child that is also within the range
+            if begin <= x.keys[i][0] <= end:
+                RIDs.append(x.keys[i][1]) # store the RID
+        if not x.leaf:
+            return self.BtreeSearchRange(x.child[len(x.child)-1], begin, end, RIDs) # need to go one past the last node for some cases
