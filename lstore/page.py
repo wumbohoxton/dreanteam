@@ -37,12 +37,12 @@ class Page:
 class PageRange:
 
     def __init__(self, num_columns): # initialize 16 base pages indexed at 0
-        self.total_columns = num_columns + MANDATORY_COLUMNS
+        self.num_columns = num_columns # this includes the 4 metadata columns when we pass it in from table. page range doesn't need to be concerned about this
         self.basePageToWrite = 0 # a variable that keeps count of the current base page we should write to
 
         self.base_pages = []
         for base_page in range(0, MAX_BASE_PAGES): # make 16 base pages
-            for page in range(0, (self.total_columns)): 
+            for page in range(0, (self.num_columns)): 
                 self.base_pages[base_page][page] = Page(page) # create a page for each column
 
         self.tail_pages = []
@@ -50,7 +50,7 @@ class PageRange:
 
     def allocate_new_tail_page(self):
         newTailPage = []
-        for page in range(0, self.total_columns): # create one tail page
+        for page in range(0, self.num_columns): # create one tail page
             newTailPage.append(Page(page))
         self.tail_pages.append(newTailPage)
 
