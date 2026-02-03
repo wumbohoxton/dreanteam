@@ -84,6 +84,53 @@ class Table:
             self.page_directory[(i, values[RID_COLUMN])] = (page_range_index, page_range.basePageToWrite, page_offsets[i])
         return True
     
+    """
+    # update a record. append a tail page, update indirection columns as needed
+    # columns: an array of the columns with values we want the record to be updated to. does not include the 4 metadata columns so we need to calculate those ourselves
+    """
+    def update_record(self, primary_key, columns):
+        RIDs = self.index.locate(self.key, primary_key) 
+        if len(RIDs) == 0: # record does not exist
+            return False 
+        # if the record exists there should only be one item in the list because primary keys are unique
+        baseRID = RIDs[0]
+
+        # read the indirection value's location in the base pages
+        # we do this because we need to access the old version of the record and also link up the new tail page with the old tail page pointer
+        indirection_location = self.page_directory.get((INDIRECTION_COLUMN, baseRID))
+        page_range_index = indirection_location[0]
+        base_page_index = indirection_location[1]
+        page_offset = indirection_location[2]
+        indirection_pointer = self.page_ranges[page_range_index][base_page_index].read(page_offset)
+
+        # initialize an array with the complete list of data values to insert (metadata values + the record's values)
+        values = [None] * METADATA_COLUMNS
+        values[INDIRECTION_COLUMN] = None # not needed but included for clarity
+        values[RID_COLUMN] = self.getNewRID()
+        values[TIMESTAMP_COLUMN] = time.ctime(time.time()) 
+
+        # <--!--> SCHEMA ENCODING HERE IS A STAND IN. NEED TO FIGURE OUT WHAT ITS BITS SHOULD ACTUALLY BE!!! <--!--> 
+        values[SCHEMA_ENCODING_COLUMN] = '0' * self.table.num_columns
+        values += columns
+
+        # this would be the first update to the record, so we need to 
+        # (1) change the base's indirection pointer from None to our RID 
+        # (2) set the new tail page's indirection to the base page's RID
+        if indirection_pointer == None:
+            self.page_ranges[page_range_index][base_page_index].replace(values[RID_COLUMN], page_offset) # (1)
+            values[INDIRECTION_COLUMN] = baseRID # (2)
+        # if this isn't the first update, then
+        # (1) set the new tail page's indirection to what was previously contained in the base page
+        # (2) update the base page's indirection to point to the new tail page's RID
+        else:
+            values[INDIRECTION_COLUMN] = indirection_pointer # (1)
+            self.page_ranges[page_range_index][base_page_index].replace(values[RID_COLUMN], page_offset) # (2)
+
+        # todo insert the new tail record
+
+        return True
+
+
     def getNewRID(self):
         RID = self.RID_counter
         self.RID_counter += 1

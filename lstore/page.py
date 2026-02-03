@@ -34,6 +34,16 @@ class Page:
         else:
             return None
         
+    """
+    # replace the value of an entry already within the page. mostly just for indirection pointers
+    # value - the new value of the entry
+    # index - the index of the entry that will be replaced
+    """
+    def replace(self, value: bytes, index):
+        value.to_bytes()
+        self.data[index:index+len(value)] = value
+
+        
 class PageRange:
 
     def __init__(self, num_columns): # initialize 16 base pages indexed at 0
