@@ -1,3 +1,5 @@
+from lstore.table import Record
+
 CAPACITY = 4096
 MANDATORY_COLUMNS = 4
 MAX_BASE_PAGES = 16
@@ -36,7 +38,8 @@ class PageRange:
 
     def __init__(self, num_columns): # initialize 16 base pages indexed at 0
         self.total_columns = num_columns + MANDATORY_COLUMNS
-        
+        self.basePageToWrite = 0 # a variable that keeps count of the current base page we should write to
+
         self.base_pages = []
         for base_page in range(0, MAX_BASE_PAGES): # make 16 base pages
             for page in range(0, (self.total_columns)): 
