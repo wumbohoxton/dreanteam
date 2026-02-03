@@ -1,6 +1,6 @@
 from lstore.index import Index
 from time import time
-from lstore.page import Page
+from lstore.page import Page, PageRange
 
 INDIRECTION_COLUMN = 0
 RID_COLUMN = 1
@@ -32,8 +32,7 @@ class Table:
         self.index = Index(self)
         self.merge_threshold_pages = 50  # The threshold to trigger a merge
 
-
-        pass
+        # pass
         # initalizing table
         self.page_ranges.append(PageRange(self.num_columns)) # create initial page range
         self.page_ranges[0]
