@@ -97,11 +97,7 @@ class Table:
 
         # read the indirection value's location in the base pages
         # we do this because we need to access the old version of the record and also link up the new tail page with the old tail page pointer
-        indirection_location = self.page_directory.get((INDIRECTION_COLUMN, baseRID))
-        page_range_index = indirection_location[0]
-        base_page_index = indirection_location[1]
-        page_offset = indirection_location[2]
-        indirection_pointer = self.page_ranges[page_range_index][base_page_index].read(page_offset)
+        indirection_pointer = self.read(INDIRECTION_COLUMN, baseRID)
 
         # initialize an array with the complete list of data values to insert (metadata values + the record's values)
         values = [None] * METADATA_COLUMNS
@@ -109,27 +105,66 @@ class Table:
         values[RID_COLUMN] = self.getNewRID()
         values[TIMESTAMP_COLUMN] = time.ctime(time.time()) 
 
-        # <--!--> SCHEMA ENCODING HERE IS A STAND IN. NEED TO FIGURE OUT WHAT ITS BITS SHOULD ACTUALLY BE!!! <--!--> 
-        values[SCHEMA_ENCODING_COLUMN] = '0' * self.table.num_columns
+        # set the schema encoding bits
+        schema_encoding = ''
+        for i in range(len(columns)):
+            # this column is being updated
+            if (columns[i] != None):
+                schema_encoding += '1'
+            # column not being updated
+            else:
+                schema_encoding += '0'
+        values[SCHEMA_ENCODING_COLUMN] = schema_encoding
+
+        # update the base record's schema encoding bits
+        base_schema = self.read(SCHEMA_ENCODING_COLUMN, baseRID)
+        base_schema_encoding = ''
+
+        for i in range(len(columns)):
+            if columns[i] == '1' or base_schema == '1':
+                base_schema_encoding += '1'
+            else:
+                base_schema_encoding += '0'
+                
+        self.replace(baseRID, SCHEMA_ENCODING_COLUMN, base_schema_encoding)
+
+        # ready the tail record
         values += columns
 
         # this would be the first update to the record, so we need to 
         # (1) change the base's indirection pointer from None to our RID 
         # (2) set the new tail page's indirection to the base page's RID
         if indirection_pointer == None:
-            self.page_ranges[page_range_index][base_page_index].replace(values[RID_COLUMN], page_offset) # (1)
+            self.replace(baseRID, RID_COLUMN, values[RID_COLUMN])
             values[INDIRECTION_COLUMN] = baseRID # (2)
         # if this isn't the first update, then
         # (1) set the new tail page's indirection to what was previously contained in the base page
         # (2) update the base page's indirection to point to the new tail page's RID
         else:
             values[INDIRECTION_COLUMN] = indirection_pointer # (1)
-            self.page_ranges[page_range_index][base_page_index].replace(values[RID_COLUMN], page_offset) # (2)
+            self.replace(baseRID, RID_COLUMN, values[RID_COLUMN]) # (2)
 
         # todo insert the new tail record
+        # check each column. if it is the first update of that column, we need to insert a tail record that copies the original data
+        # no matter what, we always have to insert the actual new tail record
+        
 
         return True
 
+    def replace(self, RID, column_for_replace, value):
+        location = self.page_directory.get((column_for_replace, RID))
+        page_range_index = location[0]
+        base_page_index = location[1]
+        page_offset = location[2]
+        self.page_ranges[page_range_index][base_page_index].replace(value, page_offset)
+
+    def read(self, column_to_read, RID):
+        location = self.page_directory.get((column_to_read, RID))
+        page_range_index = location[0]
+        base_page_index = location[1]
+        page_offset = location[2]
+        read_value = self.page_ranges[page_range_index][base_page_index].read(page_offset)
+        return read_value
 
     def getNewRID(self):
         RID = self.RID_counter
