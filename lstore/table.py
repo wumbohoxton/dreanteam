@@ -9,6 +9,7 @@ SCHEMA_ENCODING_COLUMN = 3
 
 MAX_BASE_PAGES = 16
 METADATA_COLUMNS = 4
+ENTRY_SIZE = 8 # 8 bytes
 
 class Record:
 
@@ -35,11 +36,8 @@ class Table:
         self.merge_threshold_pages = 50  # The threshold to trigger a merge
 
         self.RID_counter = 0 # counter for assigning RIDs
-
-        # pass
-        # initalizing table
         self.page_ranges.append(PageRange(self.total_columns)) # create initial page range
-        # self.page_ranges[0]
+
 
         
     """
@@ -58,7 +56,7 @@ class Table:
 
         for i in range(self.total_columns):
             # check if the base page fully has room for each column. if any of them don't, we need to move on to the next base page
-            if not page_range.base_pages[page_range.basePageToWrite][i].has_capacity(len(values[i])):
+            if not page_range.base_pages[page_range.basePageToWrite][i].has_capacity(len(values[i])): # len(values[i]) is future proofing lol -DH
                 page_range.basePageToWrite += 1
                 break
         # if the page range is full, then allocate a new page range
@@ -66,11 +64,14 @@ class Table:
             self.page_ranges.append(PageRange(self.total_columns))
             page_range = self.page_ranges[len(self.page_ranges)-1]
 
+        # ---- THIS NEEDS TO BE REVISITED as all milestones have all columns as 64 bit integers, no strings or anything
         # can safely write the entire base record into the base page of the selected page range
         page_offsets = [None] * self.total_columns # save the page offsets for each column for later
         for i in range(self.total_columns):
             page_offsets[i] = page_range.base_pages[page_range.basePageToWrite][i].page_size
             page_range.base_pages[page_range.basePageToWrite][i].write(values[i])
+        # ----------------------------------------------------------------------
+
 
         # add the values to the index. for now just index the primary key
         self.index.insert_record(values[RID_COLUMN], values[self.key], self.key)
@@ -106,7 +107,7 @@ class Table:
         values[TIMESTAMP_COLUMN] = time.ctime(time.time()) 
 
         # set the schema encoding bits
-        schema_encoding = ''
+        schema_encoding = ""
         for i in range(len(columns)):
             # this column is being updated
             if (columns[i] != None):
@@ -121,7 +122,7 @@ class Table:
         base_schema_encoding = ''
 
         for i in range(len(columns)):
-            if columns[i] == '1' or base_schema == '1':
+            if columns[i] == '1' or base_schema == '1': # checks if new update updates x column or previous updates have previously done so 
                 base_schema_encoding += '1'
             else:
                 base_schema_encoding += '0'
@@ -144,20 +145,48 @@ class Table:
             values[INDIRECTION_COLUMN] = indirection_pointer # (1)
             self.replace(baseRID, RID_COLUMN, values[RID_COLUMN]) # (2)
 
-        # todo insert the new tail record
+        # inserting a new tail record
         # check each column. if it is the first update of that column, we need to insert a tail record that copies the original data
         # no matter what, we always have to insert the actual new tail record
         
+        # get the page range from the base page
+        page_range = self.page_directory.get((RID_COLUMN, baseRID))[0] # uses base RID, RID_COLUMN as a random column to access the page range index of the base record
+        last_tail_page = len(page_range.tail_page) - 1
+        for i in range(self.total_columns):
+            # check if the last tail page fully has room for each column. if any of them don't, we need to allocate a new tail page
+            if not page_range.tail_pages[page_range.tail_page[last_tail_page]][i].has_capacity(len(values[i])): # len(values[i]) is future proofing  -DH
+                page_range.allocate_new_tail_page() 
+                last_tail_page = len(page_range.tail_page) - 1 # using new tail page
+                break
+        
+        # can safely write the entire tail record into the tail page of the selected page range
+        page_offsets = [None] * self.total_columns # save the page offsets for each column for later
+        for i in range(self.total_columns):
+            page_offsets[i] = page_range.tail_pages[last_tail_page][i].page_size # done so since page sizes might differ due to None values
+            page_range.tail_pages[last_tail_page][i].write(values[i]) #write record to the last tail page       
+
+        # add the values to the index. for now just index the primary key, no secondary keys right now
+        self.index.insert_record(values[RID_COLUMN], values[self.key], self.key)
+
+        # add the mapping to the page directory
+        page_range_index = self.page_ranges.index(page_range) # find the index of the page range we've been looking at
+        for i in range(self.total_columns):
+            # the page range index is the one our base record being updated is in
+            # the page is the first available tail page, so the last one 
+            # use the page offsets that were saved earlier 
+            self.page_directory[(i, values[RID_COLUMN])] = (page_range_index, last_tail_page, page_offsets[i])
 
         return True
 
-    def replace(self, RID, column_for_replace, value):
+    # replaces value in specified column and RID
+    def replace(self, RID, column_for_replace, value): 
         location = self.page_directory.get((column_for_replace, RID))
         page_range_index = location[0]
         base_page_index = location[1]
         page_offset = location[2]
         self.page_ranges[page_range_index][base_page_index].replace(value, page_offset)
 
+    # passes in column and RID desired, gets address of page range, base page, page offset, returns value 
     def read(self, column_to_read, RID):
         location = self.page_directory.get((column_to_read, RID))
         page_range_index = location[0]

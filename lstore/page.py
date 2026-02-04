@@ -3,6 +3,7 @@ from lstore.table import Record
 CAPACITY = 4096
 MANDATORY_COLUMNS = 4
 MAX_BASE_PAGES = 16
+ENTRY_SIZE = 8 # 8 bytes
 
 class Page:
 
@@ -11,7 +12,6 @@ class Page:
         self.data = bytearray()
         self.page_number = 0
         self.page_size = 0
-        self.data_size = 0 # the size of the data type this page stores
         
     def has_capacity(self, size):
         return self.page_size + size < CAPACITY
@@ -19,15 +19,13 @@ class Page:
     def write(self, value: bytes):
         if self.has_capacity(len(value)):
             value.to_bytes()
-            self.data[self.page_size:self.page_size + len(value)] = value
-            self.page_size += len(value)
-            if self.data_size == 0:
-                self.data_size = self.page_size # on the first write, the page size is the same as the data size
+            self.data[self.page_size:self.page_size + ENTRY_SIZE] = value
+            self.page_size += ENTRY_SIZE
             return True
         return False
     
     def read(self, lower_index):
-        upper_index = lower_index + self.data_size
+        upper_index = lower_index + ENTRY_SIZE
         # this should always pass since we don't write unless we have the full capacity needed, but just in case
         if upper_index < CAPACITY:
             return(self.data[lower_index:upper_index])
@@ -48,7 +46,7 @@ class PageRange:
 
     def __init__(self, num_columns): # initialize 16 base pages indexed at 0
         self.num_columns = num_columns # this includes the 4 metadata columns when we pass it in from table. page range doesn't need to be concerned about this
-        self.basePageToWrite = 0 # a variable that keeps count of the current base page we should write to
+        self.basePageToWrite = 0 # a variable that keeps count of the current base page we should write to, I feel like this implementation might need to be revisited when deletion comes along - DH
 
         self.base_pages = []
         for base_page in range(0, MAX_BASE_PAGES): # make 16 base pages
@@ -63,5 +61,4 @@ class PageRange:
         for page in range(0, self.num_columns): # create one tail page
             newTailPage.append(Page(page))
         self.tail_pages.append(newTailPage)
-
 
