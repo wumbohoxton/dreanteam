@@ -62,3 +62,7 @@ class PageRange:
             newTailPage.append(Page(page))
         self.tail_pages.append(newTailPage)
 
+    def insert_to_tail_page(self):
+        #reminder to possibly implement if we decide to do so
+        pass
+
