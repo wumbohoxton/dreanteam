@@ -243,6 +243,26 @@ class Table:
 
         return True
 
+    def delete_record(self, primary_key):
+        RIDs = self.index.locate(self.key, primary_key) 
+        if len(RIDs) == 0: # record does not exist
+            return False 
+        baseRID = RIDs[0]
+        record_to_delete = self.read(INDIRECTION_COLUMN, baseRID) # get the newest tail
+        
+        while 1:
+            if record_to_delete == None: # if no tail records
+                break
+            next_record = self.read(INDIRECTION_COLUMN, record_to_delete) # save the next record down the pointer stream
+            self.replace(record_to_delete, RID_COLUMN, self.read(RID_COLUMN, record_to_delete) * -1) # multiply by -1 to mark for deletion
+            record_to_delete = next_record # move onto the next record
+            if next_record == baseRID: # if we reach base record
+                break
+        self.replace(baseRID, RID_COLUMN, baseRID * -1) # mark base record for death.
+
+        return True
+
+
 
     # replaces value in specified column and RID
     def replace(self, RID, column_for_replace, value): 
