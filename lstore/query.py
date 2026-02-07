@@ -21,7 +21,26 @@ class Query:
     # Return False if record doesn't exist or is locked due to 2PL
     """
     def delete(self, primary_key):
-        pass
+        #read a record
+        #use index to locate rid
+        rid = self.table.index.locate( self.table.key, primary_key)
+        
+        #if NA skip rest of the steps
+        if rid == None:
+            return False
+
+        try:
+            #address = self.table.page_directory[rid]
+            #delete address
+            del self.table.page_directory[rid]
+            #delete primary key
+            del self.table.index[primary_key]
+            return True
+        
+        #if locked
+        except: 
+            return False
+
     
     
     """
@@ -30,10 +49,27 @@ class Query:
     # Returns False if insert fails for whatever reason
     """
     def insert(self, *columns):
+        #variables
         schema_encoding = '0' * self.table.num_columns
-        pass
-
+        primary_key = columns[self.table.key]
+        rid = len(self.table.page_directory)
     
+        #checks for duplicates//should be unique
+        if self.table.index.locate(self.table.key, primary_key) != None:
+            return False
+
+        try: 
+            #insert address to directory to get to the columns
+            self.table.page_directory[rid] = columns
+            #insert for rid key mapping
+            self.table.index[primary_key] = rid
+            return True
+        
+        except:
+            return False       
+        
+        
+
     """
     # Read matching record with specified search key
     # :param search_key: the value you want to search based on
@@ -44,9 +80,31 @@ class Query:
     # Assume that select will never be called on a key that doesn't exist
     """
     def select(self, search_key, search_key_index, projected_columns_index):
-        pass
+        #read
+        #rid key map
+        rid = self.table.index.locate(search_key_index, search_key)
+        
+        try:
+            #get full record, not just the rid to get the cols
+            record = self.table.page_directory[rid]
+            #change projected_col_index to fit record format from 1 | 0 values
+            #Record(rid, key, cols) format wanted
+            return_columns = []
+            
+            for i in range(len(projected_columns_index)):
+                #if 1 then we want that column from record
+                if projected_columns_index[i] == 1:
+                    return_columns.append(record[i])
 
+            #return a list!! of Record ojs
+            return [Record(rid, search_key, return_columns)]
+        
+        #if locked
+        except:
+            return False
     
+
+
     """
     # Read matching record with specified search key
     # :param search_key: the value you want to search based on
@@ -58,15 +116,71 @@ class Query:
     # Assume that select will never be called on a key that doesn't exist
     """
     def select_version(self, search_key, search_key_index, projected_columns_index, relative_version):
-        pass
+        #only change is record to record versions then choose version and continue
 
-    
+        #read
+        #rid key map
+        rid = self.table.index.locate(search_key_index, search_key)
+        
+        try:
+            #get record's versions so it's not just one version
+            record_versions = self.table.page_directory[rid]
+            #record w relative version
+            return_version = record_versions[relative_version]
+            #change projected_col_index to fit record format from 1 | 0 values
+            #Record(rid, key, cols) format wanted
+            return_columns = []
+            
+            for i in range(len(projected_columns_index)):
+                #if 1 then we want that column from record
+                if projected_columns_index[i] == 1:
+                    return_columns.append(return_version[i])
+
+            #return a list!! of Record ojs
+            return [Record(rid, search_key, return_columns)]
+       
+        #if locked
+        except:
+            return False
+
+#############
+
+
+
     """
     # Update a record with specified key and columns
     # Returns True if update is succesful
     # Returns False if no records exist with given key or if the target record cannot be accessed due to 2PL locking
     """
     def update(self, primary_key, *columns):
+        # locating our record using the primary key, index to locate faster
+        rid = self.table.index.locate(self.table.key, primary_key)
+
+        # if the record doesn't exist, the update doesn't go through
+        if rid is None:
+            return False
+        
+        try:
+            # reading the current record directly
+            record = self.table.page_directory[rid]
+
+            # starting the new version as a copy of the most recent
+            new_record = list(record)
+
+            # updating column by column
+            for i in range(len(columns)):
+                if columns[i] is not None:
+                    # to not change the primary key
+                    if i == self.table.key and columns[i] != primary_key:
+                        return False
+                    new_record[i] = columns[i]
+
+            # appending the newest version, but not overwriting the old ones
+            self.table.page_directory[rid] = tuple(new_record)
+
+            return True
+        except:
+            return False
         pass
 
     
@@ -79,6 +193,31 @@ class Query:
     # Returns False if no record exists in the given range
     """
     def sum(self, start_range, end_range, aggregate_column_index):
+        total = 0   # starting at 0 count
+        found = False   # making sure there is at least 1 valid record found
+
+        try:
+            # going through all of the keys in range
+            for key in range(start_range, end_range + 1):
+                # locating the RID for the current keys
+                rid = self.table.index.locate(self.table.key, key)
+                
+                # skipping keys that DNE
+                if rid is None:
+                    continue
+
+                # getting all versions of the record
+                record = self.table.page_directory[rid]
+
+                # adding values from the most recent versions
+                total += record[aggregate_column_index]
+                found = True
+
+            # return false if no records are found
+            return total if found else False
+        except:
+            return False
+
         pass
 
     
@@ -92,6 +231,27 @@ class Query:
     # Returns False if no record exists in the given range
     """
     def sum_version(self, start_range, end_range, aggregate_column_index, relative_version):
+        # no versions will exist if page_directory stores only 1 tuple per RID
+        if relative_version != 0:
+            return False
+        
+        total = 0
+        found = False
+
+        try:
+            for key in range(start_range, end_range + 1):
+                rid = self.table.index.locate(self.table.key, key)
+                if rid is None:
+                    continue
+
+                record = self.table.page_directory[rid]
+                # adding the value from the needed version
+                total += record[aggregate_column_index]
+                found = True
+
+            return total if found else False
+        except:
+            return False
         pass
 
     
@@ -106,8 +266,12 @@ class Query:
     def increment(self, key, column):
         r = self.select(key, self.table.key, [1] * self.table.num_columns)[0]
         if r is not False:
+            # creating an update list
             updated_columns = [None] * self.table.num_columns
+
+            # incrementing the specific column
             updated_columns[column] = r[column] + 1
-            u = self.update(key, *updated_columns)
-            return u
+
+            # returning and applying the updated columns
+            return self.update(key, *updated_columns)
         return False
