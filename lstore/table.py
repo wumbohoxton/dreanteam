@@ -302,9 +302,11 @@ class Table:
     # @return col_contents: int value at column that matches primary key
     def rabbit_hunt(self, col_idx, primary_key, version_num):
 
+        physical_col_idx = col_idx + METADATA_COLUMNS
+
         RIDs = self.index.locate(self.key, primary_key) 
         if len(RIDs) == 0: # record does not exist
-            return False 
+            return None 
         baseRID = RIDs[0] # if the record exists there should only be one item in the list because primary keys are unique
 
         indirection_RID = self.read(INDIRECTION_COLUMN, baseRID)
@@ -312,12 +314,12 @@ class Table:
             indirection_RID = baseRID
 
         count = 0
-        while (baseRID != indirection_RID):
+        while baseRID != indirection_RID:
 
             schema = self.read(SCHEMA_ENCODING_COLUMN, indirection_RID)
-            if (schema[col_idx] == 1): # if value @col_idx is present
-                if (count == version_num): # at version number, return
-                    col_contents = self.read(col_idx, indirection_RID)
+            if schema[col_idx] == '1': # if value @col_idx is present
+                if count == version_num: # at version number, return
+                    col_contents = self.read(physical_col_idx, indirection_RID)
                     return col_contents
                 count += 1
                 
@@ -325,6 +327,6 @@ class Table:
             indirection_RID = self.read(INDIRECTION_COLUMN, indirection_RID)
 
         # catch all, return base record
-        col_contents = self.read(col_idx, baseRID)
+        col_contents = self.read(physical_col_idx, baseRID)
         return col_contents
  
