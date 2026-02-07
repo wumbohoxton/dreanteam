@@ -4,8 +4,8 @@ from lstore.table import Table
 class Database():
 
     def __init__(self):
-        self.tables = []
-        #self.tables = {} # dictionary for faster lookup alternative?
+        #self.tables = []
+        self.tables = {} # dictionary for faster lookup alternative?
 
     # Not required for milestone1
     def open(self, path):
@@ -28,9 +28,9 @@ class Database():
             return None
 
         table = Table(name, num_columns, key_index)
-        self.tables.append(table)
+        #self.tables.append(table)
 
-        #self.tables[name] = table # dictionary alternative
+        self.tables[name] = table # dictionary alternative
 
         return table # assuming it wants the table returned instead of boolean
 
@@ -43,9 +43,9 @@ class Database():
         if table is None: # prevent ValueError in case of non-existant table
             print(f"table '{name}' DNE")
             return False
-        self.tables.remove(table)
+        #self.tables.remove(table)
 
-        #del self.tables[name]  # dictionary alternative
+        del self.tables[name]  # dictionary alternative
 
         return True
 
@@ -54,10 +54,10 @@ class Database():
     # Returns table with the passed name
     """
     def get_table(self, name):
-        for table in self.tables:
-            if table.name == name:
-                return table
+        #for table in self.tables:
+        #    if table.name == name:
+        #        return table
             
-        # return self.tables.get(name, None) # dictionary alternative
+        return self.tables.get(name, None) # dictionary alternative
 
-        return None
+        #return None
