@@ -1,4 +1,4 @@
-from lstore.table import Record
+# from lstore.table import Record
 
 CAPACITY = 4096
 MANDATORY_COLUMNS = 4
@@ -49,17 +49,18 @@ class PageRange:
         self.basePageToWrite = 0 # a variable that keeps count of the current base page we should write to, I feel like this implementation might need to be revisited when deletion comes along - DH
 
         self.base_pages = []
-        for base_page in range(0, MAX_BASE_PAGES): # make 16 base pages
+        for base_page in range(MAX_BASE_PAGES): # make 16 base pages
+            self.base_pages.append([])
             for page in range(0, (self.num_columns)): 
-                self.base_pages[base_page][page] = Page(page) # create a page for each column
+                self.base_pages[base_page].append(Page()) # create a page for each column
 
         self.tail_pages = []
         self.allocate_new_tail_page()
 
     def allocate_new_tail_page(self):
         newTailPage = []
-        for page in range(0, self.num_columns): # create one tail page
-            newTailPage.append(Page(page))
+        for page in range(self.num_columns): # create one tail page
+            newTailPage.append(Page())
         self.tail_pages.append(newTailPage)
 
     def insert_to_tail_page(self):
