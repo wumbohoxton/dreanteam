@@ -21,26 +21,26 @@ class Query:
     # Return False if record doesn't exist or is locked due to 2PL
     """
     def delete(self, primary_key):
-        #read a record
-        #use index to locate rid
-        rid = self.table.index.locate( self.table.key, primary_key)
+        # #read a record
+        # #use index to locate rid
+        # rid = self.table.index.locate( self.table.key, primary_key)
         
-        #if NA skip rest of the steps
-        if rid == None:
-            return False
+        # #if NA skip rest of the steps
+        # if rid == None:
+        #     return False
 
-        try:
-            #address = self.table.page_directory[rid]
-            #delete address
-            del self.table.page_directory[rid]
-            #delete primary key
-            del self.table.index[primary_key]
-            return True
+        # try:
+        #     #address = self.table.page_directory[rid]
+        #     #delete address
+        #     del self.table.page_directory[rid]
+        #     #delete primary key
+        #     del self.table.index[primary_key]
+        #     return True
         
-        #if locked
-        except: 
-            return False
-
+        # #if locked
+        # except: 
+        #     return False
+        self.table.delete_record(primary_key) #lol just for now
     
     
     """
@@ -49,24 +49,25 @@ class Query:
     # Returns False if insert fails for whatever reason
     """
     def insert(self, *columns):
-        #variables
-        schema_encoding = '0' * self.table.num_columns
-        primary_key = columns[self.table.key]
-        rid = len(self.table.page_directory)
+        # #variables
+        # schema_encoding = '0' * self.table.num_columns
+        # primary_key = columns[self.table.key]
+        # rid = len(self.table.page_directory)
     
         #checks for duplicates//should be unique
-        if self.table.index.locate(self.table.key, primary_key) != None:
+        if self.table.index.locate(self.table.key, columns[self.table.key]) != None:
             return False
 
-        try: 
-            #insert address to directory to get to the columns
-            self.table.page_directory[rid] = columns
-            #insert for rid key mapping
-            self.table.index[primary_key] = rid
-            return True
+        # try: 
+        #     #insert address to directory to get to the columns
+        #     self.table.page_directory[rid] = columns # tuple of column and RID
+        #     #insert for rid key mapping
+        #     self.table.index[primary_key] = rid
+        #     return True
         
-        except:
-            return False       
+        # except:
+        #     return False  
+        return self.table.insert_new_record(columns)     
         
         
 
@@ -80,9 +81,14 @@ class Query:
     # Assume that select will never be called on a key that doesn't exist
     """
     def select(self, search_key, search_key_index, projected_columns_index):
+
+        #introduce some sort of rab bit hunting through the tail records, as well as checking what values we have gathered already
+
+
+
         #read
         #rid key map
-        rid = self.table.index.locate(search_key_index, search_key)
+        rid = self.table.index.locate(search_key_index, search_key) # get RID of base record, then access indirection and get tail record, get specified column data we want
         
         try:
             #get full record, not just the rid to get the cols
@@ -117,7 +123,7 @@ class Query:
     """
     def select_version(self, search_key, search_key_index, projected_columns_index, relative_version):
         #only change is record to record versions then choose version and continue
-
+        # same thing with rabbit hunting, only that you traverse through indrection a specified number of times
         #read
         #rid key map
         rid = self.table.index.locate(search_key_index, search_key)
@@ -153,35 +159,37 @@ class Query:
     # Returns False if no records exist with given key or if the target record cannot be accessed due to 2PL locking
     """
     def update(self, primary_key, *columns):
-        # locating our record using the primary key, index to locate faster
-        rid = self.table.index.locate(self.table.key, primary_key)
+        # # locating our record using the primary key, index to locate faster
+        # rid = self.table.index.locate(self.table.key, primary_key)
 
-        # if the record doesn't exist, the update doesn't go through
-        if rid is None:
-            return False
+        # # if the record doesn't exist, the update doesn't go through
+        # if rid is None:
+        #     return False
         
-        try:
-            # reading the current record directly
-            record = self.table.page_directory[rid]
+        # try:
+        #     # reading the current record directly
+        #     record = self.table.page_directory[rid]
 
-            # starting the new version as a copy of the most recent
-            new_record = list(record)
+        #     # starting the new version as a copy of the most recent
+        #     new_record = list(record)
 
-            # updating column by column
-            for i in range(len(columns)):
-                if columns[i] is not None:
-                    # to not change the primary key
-                    if i == self.table.key and columns[i] != primary_key:
-                        return False
-                    new_record[i] = columns[i]
+        #     # updating column by column
+        #     for i in range(len(columns)):
+        #         if columns[i] is not None:
+        #             # to not change the primary key
+        #             if i == self.table.key and columns[i] != primary_key:
+        #                 return False
+        #             new_record[i] = columns[i]
 
-            # appending the newest version, but not overwriting the old ones
-            self.table.page_directory[rid] = tuple(new_record)
+        #     # appending the newest version, but not overwriting the old ones
+        #     self.table.page_directory[rid] = tuple(new_record)
 
-            return True
-        except:
-            return False
-        pass
+        #     return True
+        # except:
+        #     return False
+        # pass
+
+        return self.table.update_record(primary_key, columns)
 
     
     """
