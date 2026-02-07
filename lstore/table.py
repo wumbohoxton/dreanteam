@@ -290,4 +290,41 @@ class Table:
     def __merge(self):
         print("merge is happening")
         pass
+
+    """
+    Searches through tail records and returns the contents of a given column that match
+    the given primary key in the given version.
+    """
+    # @param int col_idx: index of column 
+    # @param int primary_key: value of primary key to match
+    # @param int version_num: version number to match, where 0 is latest
+
+    # @return col_contents: int value at column that matches primary key
+    def rabbit_hunt(self, col_idx, primary_key, version_num):
+
+        RIDs = self.index.locate(self.key, primary_key) 
+        if len(RIDs) == 0: # record does not exist
+            return False 
+        baseRID = RIDs[0] # if the record exists there should only be one item in the list because primary keys are unique
+
+        indirection_RID = self.read(INDIRECTION_COLUMN, baseRID)
+        if indirection_RID == None: # base rid becomes tail's indirection value if None
+            indirection_RID = baseRID
+
+        count = 0
+        while (baseRID != indirection_RID):
+
+            schema = self.read(SCHEMA_ENCODING_COLUMN, indirection_RID)
+            if (schema[col_idx] == 1): # if value @col_idx is present
+                if (count == version_num): # at version number, return
+                    col_contents = self.read(col_idx, indirection_RID)
+                    return col_contents
+                count += 1
+                
+            # iterate
+            indirection_RID = self.read(INDIRECTION_COLUMN, indirection_RID)
+
+        # catch all, return base record
+        col_contents = self.read(col_idx, baseRID)
+        return col_contents
  
