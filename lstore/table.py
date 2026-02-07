@@ -312,6 +312,7 @@ class Table:
         baseRID = RIDs[0] # if the record exists there should only be one item in the list because primary keys are unique
 
         indirection_RID = self.read(INDIRECTION_COLUMN, baseRID)
+        indirection_RID = indirection_RID.decode()
         if indirection_RID == None: # base rid becomes tail's indirection value if None
             indirection_RID = baseRID
 

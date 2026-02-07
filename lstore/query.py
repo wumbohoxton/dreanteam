@@ -87,18 +87,18 @@ class Query:
         #rid key map
         rid = self.table.index.locate(search_key_index, search_key) # get RID of base record, then access indirection and get tail record, get specified column data we want
         return_columns = []
-        try:
-            for i in range(len(projected_columns_index)):
-                if projected_columns_index[i] == 1:
-                    return_columns[i] = self.table.rabbit_hunt(search_key_index, search_key, LATEST_VERSION)
-                else:
-                    return_columns[i] = None
-            #return a list!! of Record ojs
-            return [Record(rid, search_key, return_columns)]
+        
+        for i in range(len(projected_columns_index)):
+            if projected_columns_index[i] == 1:
+                return_columns.append(self.table.rabbit_hunt(search_key_index, search_key, LATEST_VERSION))
+            else:
+                return_columns[i] = None
+        #return a list!! of Record ojs
+        return [Record(rid, search_key, return_columns)]
         
         #if locked
-        except:
-            return False
+        # except:
+        #     return False # change back to false later??!?!?!?!?!
     
 
 
