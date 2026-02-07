@@ -1,5 +1,5 @@
 from lstore.index import Index
-from time import time
+import time
 from lstore.page import Page, PageRange
 
 INDIRECTION_COLUMN = 0
@@ -45,19 +45,20 @@ class Table:
     # columns: an array of the columns with values we want to insert. does not include the 4 metadata columns so we need to calculate those ourselves
     """
     def insert_new_record(self, columns):
+        
         page_range = self.page_ranges[len(self.page_ranges)-1] # the page range we want to write to is the last one in the array
         # initialize an array with the complete list of data values to insert (metadata values + the record's values)
-        values = [None] * METADATA_COLUMNS
-        values[INDIRECTION_COLUMN] = None # not needed but included for clarity
+        values = [0] * METADATA_COLUMNS
+        values[INDIRECTION_COLUMN] = 0 # not needed but included for clarity
         values[RID_COLUMN] = self.getNewRID()
-        values[TIMESTAMP_COLUMN] = time.ctime(time.time()) 
-        values[SCHEMA_ENCODING_COLUMN] = '0' * self.table.num_columns
+        values[TIMESTAMP_COLUMN] = 42
+        values[SCHEMA_ENCODING_COLUMN] = '0' * self.num_columns
         values += columns
 
         for i in range(self.total_columns):
             # check if the base page fully has room for each column. if any of them don't, we need to move on to the next base page
-            if not page_range.base_pages[page_range.basePageToWrite][i].has_capacity(len(values[i])): # len(values[i]) is future proofing lol -DH
-                page_range.basePageToWrite += 1
+            if not page_range.base_pages[page_range.basePageToWrite][i].has_capacity(8): # len(values[i]) is future proofing lol -DH
+                page_range.basePageToWrite += 1 
                 break
         # if the page range is full, then allocate a new page range
         if page_range.basePageToWrite >= MAX_BASE_PAGES:
@@ -104,7 +105,7 @@ class Table:
         values = [None] * METADATA_COLUMNS
         values[INDIRECTION_COLUMN] = None # not needed but included for clarity
         values[RID_COLUMN] = self.getNewRID()
-        values[TIMESTAMP_COLUMN] = time.ctime(time.time()) 
+        values[TIMESTAMP_COLUMN] = 42
 
         # set the schema encoding bits
         schema_encoding = ""

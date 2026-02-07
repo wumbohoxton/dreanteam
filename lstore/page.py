@@ -16,11 +16,14 @@ class Page:
     def has_capacity(self, size):
         return self.page_size + size < CAPACITY
 
-    def write(self, value: bytes):
-        if self.has_capacity(len(value)):
-            value.to_bytes()
-            self.data[self.page_size:self.page_size + ENTRY_SIZE] = value
-            self.page_size += ENTRY_SIZE
+    def write(self, value):
+        if self.has_capacity(ENTRY_SIZE):
+            if isinstance(value, str):
+                self.data[self.page_size:self.page_size + ENTRY_SIZE] = value.encode()
+                self.page_size += ENTRY_SIZE
+            else:
+                self.data[self.page_size:self.page_size + ENTRY_SIZE] = value.to_bytes(ENTRY_SIZE, byteorder="little")
+                self.page_size += ENTRY_SIZE
             return True
         return False
     

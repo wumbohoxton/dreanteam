@@ -1,6 +1,7 @@
 from lstore.table import Table, Record
 from lstore.index import Index
 
+LATEST_VERSION = 0
 
 class Query:
     """
@@ -53,11 +54,11 @@ class Query:
         # schema_encoding = '0' * self.table.num_columns
         # primary_key = columns[self.table.key]
         # rid = len(self.table.page_directory)
-    
-        #checks for duplicates//should be unique
-        if self.table.index.locate(self.table.key, columns[self.table.key]) != None:
-            return False
+        RIDs = self.table.index.locate(self.table.key, columns[self.table.key]) 
+        if len(RIDs) >= 1:
+             return False
 
+        
         # try: 
         #     #insert address to directory to get to the columns
         #     self.table.page_directory[rid] = columns # tuple of column and RID
@@ -83,25 +84,15 @@ class Query:
     def select(self, search_key, search_key_index, projected_columns_index):
 
         #introduce some sort of rab bit hunting through the tail records, as well as checking what values we have gathered already
-
-
-
-        #read
         #rid key map
         rid = self.table.index.locate(search_key_index, search_key) # get RID of base record, then access indirection and get tail record, get specified column data we want
-        
+        return_columns = []
         try:
-            #get full record, not just the rid to get the cols
-            record = self.table.page_directory[rid]
-            #change projected_col_index to fit record format from 1 | 0 values
-            #Record(rid, key, cols) format wanted
-            return_columns = []
-            
             for i in range(len(projected_columns_index)):
-                #if 1 then we want that column from record
                 if projected_columns_index[i] == 1:
-                    return_columns.append(record[i])
-
+                    return_columns[i] = self.table.rabbit_hunt(search_key_index, search_key, LATEST_VERSION)
+                else:
+                    return_columns[i] = None
             #return a list!! of Record ojs
             return [Record(rid, search_key, return_columns)]
         
@@ -207,18 +198,9 @@ class Query:
         try:
             # going through all of the keys in range
             for key in range(start_range, end_range + 1):
-                # locating the RID for the current keys
-                rid = self.table.index.locate(self.table.key, key)
-                
-                # skipping keys that DNE
-                if rid is None:
-                    continue
-
-                # getting all versions of the record
-                record = self.table.page_directory[rid]
 
                 # adding values from the most recent versions
-                total += record[aggregate_column_index]
+                total += self.table.rabbit_hunt(aggregate_column_index, key, LATEST_VERSION)
                 found = True
 
             # return false if no records are found
@@ -240,27 +222,23 @@ class Query:
     """
     def sum_version(self, start_range, end_range, aggregate_column_index, relative_version):
         # no versions will exist if page_directory stores only 1 tuple per RID
-        if relative_version != 0:
-            return False
-        
-        total = 0
-        found = False
+
+        total = 0   # starting at 0 count
+        found = False   # making sure there is at least 1 valid record found
 
         try:
+            # going through all of the keys in range
             for key in range(start_range, end_range + 1):
-                rid = self.table.index.locate(self.table.key, key)
-                if rid is None:
-                    continue
 
-                record = self.table.page_directory[rid]
-                # adding the value from the needed version
-                total += record[aggregate_column_index]
+                # adding values from the most recent versions
+                total += self.table.rabbit_hunt(aggregate_column_index, key, relative_version)
                 found = True
 
+            # return false if no records are found
             return total if found else False
         except:
             return False
-        pass
+
 
     
     """
