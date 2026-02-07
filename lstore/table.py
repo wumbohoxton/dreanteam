@@ -119,6 +119,7 @@ class Table:
         values[SCHEMA_ENCODING_COLUMN] = schema_encoding
 
         base_schema = self.read(SCHEMA_ENCODING_COLUMN, baseRID)
+        base_schema = base_schema.decode()
 
         # --------- check if first time update, if so, insert that tail record -----------
         
