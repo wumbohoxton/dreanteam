@@ -339,6 +339,7 @@ class Table:
 
     # @return col_contents: int value at column that matches primary key
     def rabbit_hunt(self, col_idx, primary_key, version_num):
+        version_num *= -1
 
         physical_col_idx = col_idx + METADATA_COLUMNS
 

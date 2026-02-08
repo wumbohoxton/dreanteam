@@ -118,35 +118,23 @@ class Query:
     # Assume that select will never be called on a key that doesn't exist
     """
     def select_version(self, search_key, search_key_index, projected_columns_index, relative_version):
-        #only change is record to record versions then choose version and continue
-        # same thing with rabbit hunting, only that you traverse through indrection a specified number of times
-        #read
+        #introduce some sort of rab bit hunting through the tail records, as well as checking what values we have gathered already
         #rid key map
-        rids = self.table.index.locate(search_key_index, search_key)
+        # get one RID
+        rids = self.table.index.locate(search_key_index, search_key) # get RID of base record, then access indirection and get tail record, get specified column data we want
         if len(rids) == 0:
             return False
         rid = rids[0]
         
-        try:
-            #get record's versions so it's not just one version
-            record_versions = self.table.page_directory[rid]
-            #record w relative version
-            return_version = record_versions[relative_version]
-            #change projected_col_index to fit record format from 1 | 0 values
-            #Record(rid, key, cols) format wanted
-            return_columns = []
-            
-            for i in range(len(projected_columns_index)):
-                #if 1 then we want that column from record
-                if projected_columns_index[i] == 1:
-                    return_columns.append(return_version[i])
-
-            #return a list!! of Record ojs
-            return [Record(rid, search_key, return_columns)]
-       
-        #if locked
-        except:
-            return False
+        return_columns = []
+        
+        for i in range(len(projected_columns_index)):
+            if projected_columns_index[i] == 1:
+                return_columns.append(self.table.rabbit_hunt(i, search_key, relative_version))
+            else:
+                return_columns.append(0)
+        #return a list!! of Record ojs
+        return [Record(rid, search_key, return_columns)]
 
 #############
 
