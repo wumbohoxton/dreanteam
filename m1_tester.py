@@ -31,13 +31,13 @@ for i in range(0, number_of_records):
 
     records[key] = [key, randint(0, 20), randint(0, 20), randint(0, 20), randint(0, 20)]
     query.insert(*records[key])
-    # print('inserted', records[key])
+    print('inserted', records[key])
 print("Insert finished")
 
 # Check inserted records using select query
 for key in records:
     # select function will return array of records 
-    # here we are sure that there is only one record in t hat array
+    # here we are sure that there is only one record in that array
     record = query.select(key, 0, [1, 1, 1, 1, 1])[0]
     error = False
     for i, column in enumerate(record.columns):
@@ -66,7 +66,8 @@ for key in records:
             if column != records[key][j]:
                 error = True
         if error:
-            print('update error on', original, 'and', updated_columns, ':', record, ', correct:', records[key])
+            pass
+            # print('update error on', original, 'and', updated_columns, ':', record, ', correct:', records[key])
         else:
             pass
             # print('update on', original, 'and', updated_columns, ':', record)
@@ -81,7 +82,8 @@ for c in range(0, grades_table.num_columns):
         column_sum = sum(map(lambda key: records[key][c], keys[r[0]: r[1] + 1]))
         result = query.sum(keys[r[0]], keys[r[1]], c)
         if column_sum != result:
-            print('sum error on [', keys[r[0]], ',', keys[r[1]], ']: ', result, ', correct: ', column_sum)
+            pass
+            # print('sum error on [', keys[r[0]], ',', keys[r[1]], ']: ', result, ', correct: ', column_sum)
         else:
             pass
             # print('sum on [', keys[r[0]], ',', keys[r[1]], ']: ', column_sum)

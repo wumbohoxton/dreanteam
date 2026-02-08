@@ -75,7 +75,8 @@ class Table:
 
 
         # add the values to the index. for now just index the primary key
-        self.index.insert_record(values[RID_COLUMN], values[self.key], self.key)
+        for i in range(self.num_columns):
+            self.index.insert_record(values[RID_COLUMN], values[i], i)
 
         # add the mapping to the page directory
         page_range_index = len(self.page_ranges)-1
@@ -280,7 +281,8 @@ class Table:
         page_range_index = location[0]
         base_page_index = location[1]
         page_offset = location[2]
-        read_value = self.page_ranges[page_range_index][base_page_index].read(page_offset)
+        read_value = self.page_ranges[page_range_index]
+        read_value = read_value.base_pages[base_page_index][column_to_read].read(page_offset)
         return read_value
 
     def getNewRID(self):
@@ -306,13 +308,13 @@ class Table:
 
         physical_col_idx = col_idx + METADATA_COLUMNS
 
-        RIDs = self.index.locate(self.key, primary_key) 
+        RIDs = self.index.locate(col_idx, primary_key)
         if len(RIDs) == 0: # record does not exist
             return None 
         baseRID = RIDs[0] # if the record exists there should only be one item in the list because primary keys are unique
 
         indirection_RID = self.read(INDIRECTION_COLUMN, baseRID)
-        indirection_RID = indirection_RID.decode()
+        indirection_RID = indirection_RID
         if indirection_RID == None: # base rid becomes tail's indirection value if None
             indirection_RID = baseRID
 
@@ -320,6 +322,7 @@ class Table:
         while baseRID != indirection_RID:
 
             schema = self.read(SCHEMA_ENCODING_COLUMN, indirection_RID)
+            schema = schema.decode()
             if schema[col_idx] == '1': # if value @col_idx is present
                 if count == version_num: # at version number, return
                     col_contents = self.read(physical_col_idx, indirection_RID)

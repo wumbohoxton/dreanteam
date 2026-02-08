@@ -9,7 +9,7 @@ class Page:
 
     def __init__(self):
         self.num_records = 0
-        self.data = bytearray()
+        self.data = bytearray(4096)
         self.page_number = 0
         self.page_size = 0
         
@@ -31,7 +31,7 @@ class Page:
         upper_index = lower_index + ENTRY_SIZE
         # this should always pass since we don't write unless we have the full capacity needed, but just in case
         if upper_index < CAPACITY:
-            return(self.data[lower_index:upper_index])
+            return int.from_bytes((self.data[lower_index:upper_index]),'big')
         else:
             return None
         

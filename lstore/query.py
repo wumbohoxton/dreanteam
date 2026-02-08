@@ -90,9 +90,9 @@ class Query:
         
         for i in range(len(projected_columns_index)):
             if projected_columns_index[i] == 1:
-                return_columns.append(self.table.rabbit_hunt(search_key_index, search_key, LATEST_VERSION))
+                return_columns.append(self.table.rabbit_hunt(i, search_key, LATEST_VERSION))
             else:
-                return_columns[i] = None
+                return_columns.append(0)
         #return a list!! of Record ojs
         return [Record(rid, search_key, return_columns)]
         
