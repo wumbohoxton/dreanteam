@@ -54,7 +54,7 @@ class Table:
         values = [0] * METADATA_COLUMNS
         values[INDIRECTION_COLUMN] = 0 # not needed but included for clarity
         values[RID_COLUMN] = self.getNewRID()
-        values[TIMESTAMP_COLUMN] = 42
+        values[TIMESTAMP_COLUMN] = time.ctime()
         values[SCHEMA_ENCODING_COLUMN] = '0' * self.num_columns
         values += columns
 
@@ -109,7 +109,7 @@ class Table:
         values = [None] * METADATA_COLUMNS
         values[INDIRECTION_COLUMN] = None # not needed but included for clarity
         values[RID_COLUMN] = self.getNewRID()
-        values[TIMESTAMP_COLUMN] = 42
+        values[TIMESTAMP_COLUMN] = time.ctime()
 
         # set the schema encoding bits
         # ensure schema_encoding has length equal to the table's number of columns
