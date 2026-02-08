@@ -91,8 +91,8 @@ class Query:
         rids = self.table.index.locate(search_key_index, search_key)
         
         #no needed since select wont call key that DNE
-        if len(rids) == 0:
-            return False
+        #if len(rids) == 0:
+        #    return False
         
         rid = rids[0]
         return_columns = []
@@ -100,8 +100,9 @@ class Query:
         for i in range(len(projected_columns_index)):
             if projected_columns_index[i] == 1:
                 return_columns.append(self.table.rabbit_hunt(i, search_key, LATEST_VERSION))
-            else:
-                return_columns.append(0)
+            #dont need
+            #else:
+                #return_columns.append(0)
         #return a list!! of Record ojs
         return [Record(rid, search_key, return_columns)]
     

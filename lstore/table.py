@@ -20,7 +20,14 @@ class Record:
         self.columns = columns # columns: a list of the values corresponding to each column
     
     def __getitem__(self, index):
-        return self.columns[index]
+        value = self.columns[index]
+        
+        #this lets the query not need a filler 0 in the list when there is None
+        #prevents crash when value is None
+        if value == None:
+            return 0
+        else: 
+            return value
 
 class Table:
 
