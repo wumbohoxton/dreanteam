@@ -18,6 +18,10 @@ class Page:
 
     def write(self, value):
         if self.has_capacity(ENTRY_SIZE):
+            # if none write 0 
+            if value is None:
+                value = 0
+            
             if isinstance(value, str):
                 self.data[self.page_size:self.page_size + ENTRY_SIZE] = value.encode()
                 self.page_size += ENTRY_SIZE
@@ -31,18 +35,25 @@ class Page:
         upper_index = lower_index + ENTRY_SIZE
         # this should always pass since we don't write unless we have the full capacity needed, but just in case
         if upper_index < CAPACITY:
-            return int.from_bytes((self.data[lower_index:upper_index]),'big')
+            return(self.data[lower_index:upper_index])
         else:
             return None
         
     """
     # replace the value of an entry already within the page. mostly just for indirection pointers
-    # value - the new value of the entry
+    # value - the new value of the entry (as an integer)
     # index - the index of the entry that will be replaced
     """
-    def replace(self, value: bytes, index):
-        value.to_bytes()
-        self.data[index:index+len(value)] = value
+    def replace(self, value, index):
+
+        if isinstance(value, int):
+            value_bytes = value.to_bytes(ENTRY_SIZE, byteorder="little")
+        elif isinstance(value, str):
+            value_bytes = value.encode()
+        else:
+            value_bytes = value  # assume it's already bytes
+        
+        self.data[index:index+len(value_bytes)] = value_bytes
 
         
 class PageRange:
@@ -69,4 +80,3 @@ class PageRange:
     def insert_to_tail_page(self):
         #reminder to possibly implement if we decide to do so
         pass
-

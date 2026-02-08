@@ -85,7 +85,12 @@ class Query:
 
         #introduce some sort of rab bit hunting through the tail records, as well as checking what values we have gathered already
         #rid key map
-        rid = self.table.index.locate(search_key_index, search_key) # get RID of base record, then access indirection and get tail record, get specified column data we want
+        # get one RID
+        rids = self.table.index.locate(search_key_index, search_key) # get RID of base record, then access indirection and get tail record, get specified column data we want
+        if len(rids) == 0:
+            return False
+        rid = rids[0]
+        
         return_columns = []
         
         for i in range(len(projected_columns_index)):
@@ -117,7 +122,10 @@ class Query:
         # same thing with rabbit hunting, only that you traverse through indrection a specified number of times
         #read
         #rid key map
-        rid = self.table.index.locate(search_key_index, search_key)
+        rids = self.table.index.locate(search_key_index, search_key)
+        if len(rids) == 0:
+            return False
+        rid = rids[0]
         
         try:
             #get record's versions so it's not just one version
