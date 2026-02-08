@@ -41,7 +41,7 @@ class Query:
         # #if locked
         # except: 
         #     return False
-        self.table.delete_record(primary_key) #lol just for now
+        self.table.delete_record(primary_key)
     
     
     """
@@ -82,15 +82,19 @@ class Query:
     # Assume that select will never be called on a key that doesn't exist
     """
     def select(self, search_key, search_key_index, projected_columns_index):
-
-        #introduce some sort of rab bit hunting through the tail records, as well as checking what values we have gathered already
+        #introduce some sort of rab bit hunting through the tail records, 
+            # as well as checking what values we have gathered already
         #rid key map
         # get one RID
-        rids = self.table.index.locate(search_key_index, search_key) # get RID of base record, then access indirection and get tail record, get specified column data we want
+        # get RID of base record, then access indirection and get tail record, 
+            #  get specified column data we want
+        rids = self.table.index.locate(search_key_index, search_key)
+        
+        #no needed since select wont call key that DNE
         if len(rids) == 0:
             return False
-        rid = rids[0]
         
+        rid = rids[0]
         return_columns = []
         
         for i in range(len(projected_columns_index)):
@@ -100,10 +104,6 @@ class Query:
                 return_columns.append(0)
         #return a list!! of Record ojs
         return [Record(rid, search_key, return_columns)]
-        
-        #if locked
-        # except:
-        #     return False # change back to false later??!?!?!?!?!
     
 
 
@@ -118,22 +118,28 @@ class Query:
     # Assume that select will never be called on a key that doesn't exist
     """
     def select_version(self, search_key, search_key_index, projected_columns_index, relative_version):
-        #introduce some sort of rab bit hunting through the tail records, as well as checking what values we have gathered already
+        #introduce some sort of rab bit hunting through the tail records, 
+            # as well as checking what values we have gathered already
         #rid key map
         # get one RID
-        rids = self.table.index.locate(search_key_index, search_key) # get RID of base record, then access indirection and get tail record, get specified column data we want
-        if len(rids) == 0:
-            return False
-        rid = rids[0]
+        # get RID of base record, then access indirection and get tail record, 
+            # get specified column data we want
+        rids = self.table.index.locate(search_key_index, search_key)
         
+        #not needed since select will never call key that DNE
+        #if len(rids) == 0:
+        #    return False
+        
+        rid = rids[0]
         return_columns = []
         
         for i in range(len(projected_columns_index)):
             if projected_columns_index[i] == 1:
                 return_columns.append(self.table.rabbit_hunt(i, search_key, relative_version))
-            else:
-                return_columns.append(0)
-        #return a list!! of Record ojs
+            #can leave out to not add zeros to output
+            #else:
+                #return_columns.append(0)
+        #return a list of Record ojs
         return [Record(rid, search_key, return_columns)]
 
 #############
