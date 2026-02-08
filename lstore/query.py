@@ -208,7 +208,9 @@ class Query:
             for key in range(start_range, end_range + 1):
 
                 # adding values from the most recent versions
-                total += self.table.rabbit_hunt(aggregate_column_index, key, LATEST_VERSION)
+                to_add = self.table.rabbit_hunt(aggregate_column_index, key, LATEST_VERSION)
+                if to_add is not None:
+                    total += to_add
                 found = True
 
             # return false if no records are found
