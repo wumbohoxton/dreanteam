@@ -23,7 +23,9 @@ class Page:
                 value = 0
             
             if isinstance(value, str):
-                self.data[self.page_size:self.page_size + ENTRY_SIZE] = value.encode()
+                value_bytes = value.encode()
+                value_bytes = value_bytes[:ENTRY_SIZE].ljust(ENTRY_SIZE, b'0')
+                self.data[self.page_size:self.page_size + ENTRY_SIZE] = value_bytes
                 self.page_size += ENTRY_SIZE
             else:
                 self.data[self.page_size:self.page_size + ENTRY_SIZE] = value.to_bytes(ENTRY_SIZE, byteorder="little")
@@ -50,10 +52,11 @@ class Page:
             value_bytes = value.to_bytes(ENTRY_SIZE, byteorder="little")
         elif isinstance(value, str):
             value_bytes = value.encode()
+            value_bytes = value_bytes[:ENTRY_SIZE].ljust(ENTRY_SIZE, b'0')
         else:
             value_bytes = value  # assume it's already bytes
         
-        self.data[index:index+len(value_bytes)] = value_bytes
+        self.data[index:index+ENTRY_SIZE] = value_bytes
 
         
 class PageRange:

@@ -66,12 +66,13 @@ for key in records:
             if column != records[key][j]:
                 error = True
         if error:
-            pass
-            # print('update error on', original, 'and', updated_columns, ':', record, ', correct:', records[key])
+            #pass
+            print('update error on', original, 'and', updated_columns, ':', record, ', correct:', records[key])
         else:
             pass
             #print('update on', original, 'and', updated_columns, ':', record)
         updated_columns[i] = None
+print("Update finished")
 
 keys = sorted(list(records.keys()))
 # aggregate on every column 
