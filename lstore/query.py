@@ -85,14 +85,19 @@ class Query:
 
         #introduce some sort of rab bit hunting through the tail records, as well as checking what values we have gathered already
         #rid key map
-        rid = self.table.index.locate(search_key_index, search_key) # get RID of base record, then access indirection and get tail record, get specified column data we want
+        # get one RID
+        rids = self.table.index.locate(search_key_index, search_key) # get RID of base record, then access indirection and get tail record, get specified column data we want
+        if len(rids) == 0:
+            return False
+        rid = rids[0]
+        
         return_columns = []
         
         for i in range(len(projected_columns_index)):
             if projected_columns_index[i] == 1:
-                return_columns.append(self.table.rabbit_hunt(search_key_index, search_key, LATEST_VERSION))
+                return_columns.append(self.table.rabbit_hunt(i, search_key, LATEST_VERSION))
             else:
-                return_columns[i] = None
+                return_columns.append(0)
         #return a list!! of Record ojs
         return [Record(rid, search_key, return_columns)]
         
@@ -117,7 +122,10 @@ class Query:
         # same thing with rabbit hunting, only that you traverse through indrection a specified number of times
         #read
         #rid key map
-        rid = self.table.index.locate(search_key_index, search_key)
+        rids = self.table.index.locate(search_key_index, search_key)
+        if len(rids) == 0:
+            return False
+        rid = rids[0]
         
         try:
             #get record's versions so it's not just one version
@@ -200,7 +208,9 @@ class Query:
             for key in range(start_range, end_range + 1):
 
                 # adding values from the most recent versions
-                total += self.table.rabbit_hunt(aggregate_column_index, key, LATEST_VERSION)
+                to_add = self.table.rabbit_hunt(aggregate_column_index, key, LATEST_VERSION)
+                if to_add is not None:
+                    total += to_add
                 found = True
 
             # return false if no records are found

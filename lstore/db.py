@@ -1,4 +1,3 @@
-from lstore import table
 from lstore.table import Table
 
 class Database():

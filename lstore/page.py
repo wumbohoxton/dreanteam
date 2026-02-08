@@ -9,7 +9,7 @@ class Page:
 
     def __init__(self):
         self.num_records = 0
-        self.data = bytearray()
+        self.data = bytearray(4096)
         self.page_number = 0
         self.page_size = 0
         
@@ -18,8 +18,14 @@ class Page:
 
     def write(self, value):
         if self.has_capacity(ENTRY_SIZE):
+            # if none write 0 
+            if value is None:
+                value = 0
+            
             if isinstance(value, str):
-                self.data[self.page_size:self.page_size + ENTRY_SIZE] = value.encode()
+                value_bytes = value.encode()
+                value_bytes = value_bytes[:ENTRY_SIZE].ljust(ENTRY_SIZE, b'0')
+                self.data[self.page_size:self.page_size + ENTRY_SIZE] = value_bytes
                 self.page_size += ENTRY_SIZE
             else:
                 self.data[self.page_size:self.page_size + ENTRY_SIZE] = value.to_bytes(ENTRY_SIZE, byteorder="little")
@@ -37,12 +43,20 @@ class Page:
         
     """
     # replace the value of an entry already within the page. mostly just for indirection pointers
-    # value - the new value of the entry
+    # value - the new value of the entry (as an integer)
     # index - the index of the entry that will be replaced
     """
-    def replace(self, value: bytes, index):
-        value.to_bytes()
-        self.data[index:index+len(value)] = value
+    def replace(self, value, index):
+
+        if isinstance(value, int):
+            value_bytes = value.to_bytes(ENTRY_SIZE, byteorder="little")
+        elif isinstance(value, str):
+            value_bytes = value.encode()
+            value_bytes = value_bytes[:ENTRY_SIZE].ljust(ENTRY_SIZE, b'0')
+        else:
+            value_bytes = value  # assume it's already bytes
+        
+        self.data[index:index+ENTRY_SIZE] = value_bytes
 
         
 class PageRange:
@@ -69,4 +83,3 @@ class PageRange:
     def insert_to_tail_page(self):
         #reminder to possibly implement if we decide to do so
         pass
-
