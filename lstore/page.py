@@ -1,4 +1,5 @@
 # from lstore.table import Record
+import struct
 
 CAPACITY = 4096
 MANDATORY_COLUMNS = 4
@@ -25,6 +26,10 @@ class Page:
             if isinstance(value, str):
                 value_bytes = value.encode()
                 value_bytes = value_bytes[:ENTRY_SIZE].ljust(ENTRY_SIZE, b'0')
+                self.data[self.page_size:self.page_size + ENTRY_SIZE] = value_bytes
+                self.page_size += ENTRY_SIZE
+            elif isinstance(value, float):
+                value_bytes = struct.pack('<d', value)
                 self.data[self.page_size:self.page_size + ENTRY_SIZE] = value_bytes
                 self.page_size += ENTRY_SIZE
             else:

@@ -1,5 +1,6 @@
 from lstore.index import Index
 import time
+import struct
 from lstore.page import Page, PageRange
 
 INDIRECTION_COLUMN = 0
@@ -54,7 +55,7 @@ class Table:
         values = [0] * METADATA_COLUMNS
         values[INDIRECTION_COLUMN] = 0 # not needed but included for clarity
         values[RID_COLUMN] = self.getNewRID()
-        values[TIMESTAMP_COLUMN] = time.ctime()
+        values[TIMESTAMP_COLUMN] = time.time()
         values[SCHEMA_ENCODING_COLUMN] = '0' * self.num_columns
         values += columns
 
@@ -109,7 +110,7 @@ class Table:
         values = [None] * METADATA_COLUMNS
         values[INDIRECTION_COLUMN] = None # not needed but included for clarity
         values[RID_COLUMN] = self.getNewRID()
-        values[TIMESTAMP_COLUMN] = time.ctime()
+        values[TIMESTAMP_COLUMN] = time.time()
 
         # set the schema encoding bits
         # ensure schema_encoding has length equal to the table's number of columns
@@ -124,7 +125,7 @@ class Table:
         values[SCHEMA_ENCODING_COLUMN] = schema_encoding
 
         base_schema = self.read(SCHEMA_ENCODING_COLUMN, baseRID)
-        base_schema = base_schema.decode()
+        #base_schema = base_schema.decode()
 
         # --------- check if first time update, if so, insert that tail record -----------
         
@@ -314,8 +315,16 @@ class Table:
             read_value = page_range.tail_pages[tail_page_index][column_to_read].read(page_offset)
         
         # convert bytes to int for all columns except SCHEMA_ENCODING_COLUMN
-        if read_value is not None and column_to_read != SCHEMA_ENCODING_COLUMN:
+        # if read_value is not None and column_to_read != SCHEMA_ENCODING_COLUMN:
+        #     read_value = int.from_bytes(read_value, byteorder='little')
+
+        if read_value is not None and column_to_read == SCHEMA_ENCODING_COLUMN:
+            read_value = read_value.decode()
+        elif read_value is not None and column_to_read == TIMESTAMP_COLUMN:
+            read_value = struct.unpack('<d', read_value)[0]
+        elif read_value is not None:
             read_value = int.from_bytes(read_value, byteorder='little')
+
         
         return read_value
 
@@ -359,7 +368,7 @@ class Table:
 
             schema = self.read(SCHEMA_ENCODING_COLUMN, indirection_RID)
             # schema may be stored as fixed-size bytes, decode and ensure it's at least num_columns long
-            schema = schema.decode()
+            #schema = schema.decode()
             if len(schema) < self.num_columns:
                 schema = schema + ('0' * (self.num_columns - len(schema)))
             if schema[col_idx] == '1': # if value @col_idx is present
